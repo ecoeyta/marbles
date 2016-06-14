@@ -128,8 +128,20 @@ var part1 = require('./utils/ws_part1');
 var part2 = require('./utils/ws_part2');
 var ws = require('ws');
 var wss = {};
-var Ibc1 = require('ibm-blockchain-js');
-var ibc = new Ibc1();
+var hlc = require('hlc');
+
+// Create a client chain.
+var chain = hlc.newChain("targetChain");
+
+// Configure the KeyValStore which is used to store sensitive keys
+// as so it is important to secure this storage.
+chain.setKeyValStore( hlc.newFileKeyValStore('/tmp/keyValStore') );
+
+// Set the URL for member services
+chain.setMemberServicesUrl("grpc://localhost:50051");
+
+// Add a peer's URL
+chain.addPeer("grpc://localhost:30303");
 
 // ==================================
 // load peers manually or from VCAP, VCAP will overwrite hardcoded list!
@@ -315,6 +327,8 @@ var manual ={
 };
 var peers = manual.credentials.peers;
 console.log('loading hardcoded peers');
+var ca = manual.credentials.ca;
+console.log('loading hardcoded certificate authority');
 var users = null;																		//users are only found if security is on
 if(manual.credentials.users) users = manual.credentials.users;
 console.log('loading hardcoded users');
@@ -332,11 +346,16 @@ if(process.env.VCAP_SERVICES){															//load from vcap, search for servic
 			if(servicesObject[i][0].credentials && servicesObject[i][0].credentials.peers){
 				console.log('overwritting peers, loading from a vcap service: ', i);
 				peers = servicesObject[i][0].credentials.peers;
-				if(servicesObject[i][0].credentials.users){
-					console.log('overwritting users, loading from a vcap service: ', i);
-					users = servicesObject[i][0].credentials.users;
-				} 
-				else users = null;														//no security
+        if (servicesObject[i][0].credentials.ca){
+          console.log('overwritting ca, loading from a vcap service: ', i);
+          ca = servicesObject[i][0].credentials.ca;
+			   	if(servicesObject[i][0].credentials.users){
+				  	console.log('overwritting users, loading from a vcap service: ', i);
+				  	users = servicesObject[i][0].credentials.users;
+				  } 
+				  else users = null;													//no security	
+        }
+        else ca = null;
 				break;
 			}
 		}
@@ -344,28 +363,13 @@ if(process.env.VCAP_SERVICES){															//load from vcap, search for servic
 }
 
 // ==================================
-// configure ibm-blockchain-js sdk
+// configure hyperledger client sdk
 // ==================================
-var options = 	{
-					network:{
-						peers: peers,
-						users: users,
-						options: {quiet: true, tls:false, maxRetry: 1}
-					},
-					chaincode:{
-						zip_url: 'https://github.com/ibm-blockchain/marbles-chaincode/archive/master.zip',
-						unzip_dir: 'marbles-chaincode-master/hyperledger/part2',								//subdirectroy name of chaincode after unzipped
-						git_url: 'https://github.com/ibm-blockchain/marbles-chaincode/hyperledger/part2',		//GO get http url
-					
-						//hashed cc name from prev deployment
-						//deployed_name: '14b711be6f0d00b190ea26ca48c22234d93996b6e625a4b108a7bbbde064edf0179527f30df238d61b66246fe1908005caa5204dd73488269c8999276719ca8b'
-					}
-				};
-if(process.env.VCAP_SERVICES){
-	console.log('\n[!] looks like you are in bluemix, I am going to clear out the deploy_name so that it deploys new cc.\n[!] hope that is ok budddy\n');
-	options.chaincode.deployed_name = '';
-}
-ibc.load(options, cb_ready);																//parse/load chaincode
+// Set the URL for member services
+chain.setMemberServicesUrl("grpc://" + ca[0].url);
+
+// Add a peer's URL
+chain.addPeer("grpc://" + peers[0].api_url);
 
 var chaincode = null;
 function cb_ready(err, cc){																	//response has chaincode functions
