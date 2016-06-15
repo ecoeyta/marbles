@@ -135,7 +135,7 @@ var chain = hlc.newChain("targetChain");
 
 // Configure the KeyValStore which is used to store sensitive keys
 // as so it is important to secure this storage.
-chain.setKeyValStore( hlc.newFileKeyValStore('./tmp/keyValStore') );
+chain.setKeyValStore(hlc.newFileKeyValStore('./tmp/keyValStore'));
 
 // Set the URL for member services
 chain.setMemberServicesUrl("grpc://localhost:50051");
@@ -366,26 +366,19 @@ if (process.env.VCAP_SERVICES) {															//load from vcap, search for serv
 // configure hyperledger client sdk
 // ==================================
 // Set the URL for member services
-chain.setMemberServicesUrl("grpc://" + ca[peers[0].network_id + "_ca"].url);
+chain.setMemberServicesUrl("grpc://" + ca[peers[0].network_id + "_ca"].discovery_host + ":" + ca[peers[0].network_id + "_ca"].discovery_port);
+console.log("adding ca: grpc://" + ca[peers[0].network_id + "_ca"].discovery_host + ":" + ca[peers[0].network_id + "_ca"].discovery_port);
 
 // Add all peers' URL
 for (var i in peers) {
-  chain.addPeer("grpc://" + i.api_url);
+  chain.addPeer("grpc://" + peers[i].discovery_host + ":" + peers[i].discovery_port);
+  console.log("adding peer[" + i + "]: grpc://" + peers[i].discovery_host + ":" + peers[i].discovery_port);
 }
-//chain.addPeer("grpc://" + peers[0].api_url);
 
-chain.enroll("WebAppAdmin", "DJY27pEnl16d", function (err, webAppAdmin) {
-  if (err) return console.log("ERROR: failed to register %s: %s", err);
-  // Successfully enrolled WebAppAdmin during initialization.
-  // Set this user as the chain's registrar which is authorized to register other users.
-  chain.setRegistrar(webAppAdmin);
-
-  var deployRequest = {
-    args: [],
-    chaincodeID: "https://github.com/ibm-blockchain/marbles-chaincode/hyperledger/part2",
-    fnc: "init"
-  };
-  webAppAdmin.deploy(deployRequest);
+console.log("enrolling user %s with secret %s as registrar...", users[2].username, users[2].secret);
+chain.enroll(users[2].username, users[2].secret, function(err, user) {
+  if (err) return console.log("ERROR: failed to register user: %s", err);
+  console.log("successfully registered user %s!", users[2].username);
 });
 
 function cb_ready() {																	//response has chaincode functions
