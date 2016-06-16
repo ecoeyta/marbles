@@ -366,19 +366,39 @@ if (process.env.VCAP_SERVICES) {															//load from vcap, search for serv
 // configure hyperledger client sdk
 // ==================================
 // Set the URL for member services
-chain.setMemberServicesUrl("grpc://" + ca[peers[0].network_id + "_ca"].discovery_host + ":" + ca[peers[0].network_id + "_ca"].discovery_port);
-console.log("adding ca: grpc://" + ca[peers[0].network_id + "_ca"].discovery_host + ":" + ca[peers[0].network_id + "_ca"].discovery_port);
+var caURL = "grpc://ajp-ca.rtp.raleigh.ibm.com:50051";
+chain.setMemberServicesUrl(caURL);
+console.log("adding ca: " + caURL);
 
 // Add all peers' URL
 for (var i in peers) {
-  chain.addPeer("grpc://" + peers[i].discovery_host + ":" + peers[i].discovery_port);
-  console.log("adding peer[" + i + "]: grpc://" + peers[i].discovery_host + ":" + peers[i].discovery_port);
+  if (i > 3) break;
+  var num = parseInt(i) + 1;
+  var peerURL = "grpc://ajp-p" + num + ".rtp.raleigh.ibm.com:30303";
+  chain.addPeer(peerURL);
+  console.log("adding peer[" + i + "]: " + peerURL);
 }
 
-console.log("enrolling user %s with secret %s as registrar...", users[2].username, users[2].secret);
-chain.enroll(users[2].username, users[2].secret, function(err, user) {
+var webAdmin = {
+  "username": "test_user0",
+  "secret": "MS9qrN8hFjlE"
+}
+
+console.log("enrolling user %s with secret %s as registrar...", webAdmin.username, webAdmin.secret);
+chain.enroll(webAdmin.username, webAdmin.secret, function (err, user) {
+  if (err) return console.log("ERROR: failed to enroll user: %s", err);
+  console.log("successfully enrolled user %s!", webAdmin.username);
+});
+
+var registrationRequest = {
+  account: "something",
+  affiliation: "bank_a",
+  enrollmentID: "test_user0"
+}
+
+chain.register(registrationRequest, function(err, pass) {
   if (err) return console.log("ERROR: failed to register user: %s", err);
-  console.log("successfully registered user %s!", users[2].username);
+  console.log("successfully register user %s!");
 });
 
 function cb_ready() {																	//response has chaincode functions
