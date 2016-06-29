@@ -1,111 +1,166 @@
 // ==================================
 // Part 1 - incoming messages, look for type
 // ==================================
-var ibc = {};
-var chaincode = {};
+var registrar = null;
+var chaincodeID = null;
 var async = require('async');
 
-module.exports.setup = function(sdk, cc){
-	ibc = sdk;
-	chaincode = cc;
+module.exports.setup = function (reg, ccID) {
+	registrar = reg;
+	chaincodeID = ccID;
 };
 
-module.exports.process_msg = function(ws, data){
-	if(data.v === 1){
-		if(data.type == 'create'){
+module.exports.process_msg = function (ws, data) {
+	if (data.v === 1) {
+		if (data.type == 'create') {
 			console.log('its a create!');
-			if(data.name && data.color && data.size && data.user){
-				chaincode.invoke.init_marble([data.name, data.color, data.size, data.user], cb_invoked);				//create a new marble
+			if (data.name && data.color && data.size && data.user) {
+				var invokeRequest = {
+					chaincodeID: chaincodeID,
+					fcn: 'init_marble',
+					args: [data.name, data.color, data.size, data.user]
+				}
+				var transactionContext = registrar.invoke(invokeRequest)	//create a new marble
+
+				transactionContext.on('complete', function (results) {
+					console.log(results);
+				});
+
+				transactionContext.on('error', function(err) {
+					console.log(err);
+				});
 			}
 		}
-		else if(data.type == 'get'){
+		else if (data.type == 'get') {
 			console.log('get marbles msg');
-			chaincode.query.read(['_marbleindex'], cb_got_index);
+			var queryRequest = {
+				chaincodeID: chaincodeID,
+				fcn: 'read',
+				args: ['_marbleindex']
+			}
+			var transactionContext = registrar.query(queryRequest)	//create a new marble
+
+			transactionContext.on('complete', function (results) {
+				console.log(results);
+				cb_got_index(null, results.result);
+			});
+
+			transactionContext.on('error', function(err) {
+				console.log(err);
+			});
 		}
-		else if(data.type == 'transfer'){
+		else if (data.type == 'transfer') {
 			console.log('transfering msg');
-			if(data.name && data.user){
-				chaincode.invoke.set_user([data.name, data.user]);
+			if (data.name && data.user) {
+				var invokeRequest = {
+					chaincodeID: chaincodeID,
+					fcn: 'set_user',
+					args: [data.name, data.user]
+				}
+				var transactionContext = registrar.invoke(invokeRequest)	//create a new marble
+
+				transactionContext.on('complete', function (results) {
+					console.log('transfer complete!');
+				});
 			}
 		}
-		else if(data.type == 'remove'){
+		else if (data.type == 'remove') {
 			console.log('removing msg');
-			if(data.name){
-				chaincode.invoke.delete([data.name]);
+			if (data.name) {
+				var invokeRequest = {
+					chaincodeID: chaincodeID,
+					fcn: 'delete',
+					args: [data.name]
+				}
+				var transactionContext = registrar.invoke(invokeRequest)	//create a new marble
+
+				transactionContext.on('complete', function (results) {
+					console.log('delete complete!');
+				});
 			}
 		}
-		else if(data.type == 'chainstats'){
+		else if (data.type == 'chainstats') {
 			console.log('chainstats msg');
-			ibc.chain_stats(cb_chainstats);
+			//TODO how to get this with new SDK?
+			//ibc.chain_stats(cb_chainstats);
 		}
 	}
 
 	//got the marble index, lets get each marble
-	function cb_got_index(e, index){
-		if(e != null) console.log('error:', e);
-		else{
-			try{
+	function cb_got_index(e, index) {
+		if (e != null) console.log('error:', e);
+		else {
+			try {
 				var json = JSON.parse(index);
 				var keys = Object.keys(json);
 				var concurrency = 1;
 
 				//serialized version
-				async.eachLimit(keys, concurrency, function(key, cb) {
+				async.eachLimit(keys, concurrency, function (key, cb) {
 					console.log('!', json[key]);
-					chaincode.query.read([json[key]], function(e, marble) {
-						if(e != null) console.log('error:', e);
-						else {
-							sendMsg({msg: 'marbles', e: e, marble: JSON.parse(marble)});
-							cb(null);
-						}
+
+					var queryRequest = {
+						args: [json[key]],
+						fcn: 'read',
+						chaincodeID: chaincodeID
+					}
+
+					var transactionContext = registrar.query(queryRequest);
+					transactionContext.on('complete', function (data) {
+						sendMsg({ msg: 'marbles', e: e, marble: JSON.parse(data.result) });
+						cb(null);
 					});
-				}, function() {
-					sendMsg({msg: 'action', e: e, status: 'finished'});
+
+					transactionContext.on('error', function(err) {
+						console.log(err);
+					});
+				}, function () {
+					sendMsg({ msg: 'action', e: e, status: 'finished' });
 				});
 			}
-			catch(e){
+			catch (e) {
 				console.log('error:', e);
 			}
 		}
 	}
-	
-	function cb_invoked(e, a){
+
+	function cb_invoked(e, a) {
 		console.log('response: ', e, a);
 	}
-	
+
 	//call back for getting the blockchain stats, lets get the block height now
 	var chain_stats = {};
-	function cb_chainstats(e, stats){
+	function cb_chainstats(e, stats) {
 		chain_stats = stats;
-		if(stats && stats.height){
+		if (stats && stats.height) {
 			var list = [];
-			for(var i = stats.height - 1; i >= 1; i--){									//create a list of heights we need
+			for (var i = stats.height - 1; i >= 1; i--) {									//create a list of heights we need
 				list.push(i);
-				if(list.length >= 8) break;
+				if (list.length >= 8) break;
 			}
 			list.reverse();																//flip it so order is correct in UI
 			console.log(list);
-			async.eachLimit(list, 1, function(key, cb) {								//iter through each one, and send it
-				ibc.block_stats(key, function(e, stats){
+			async.eachLimit(list, 1, function (key, cb) {								//iter through each one, and send it
+				ibc.block_stats(key, function (e, stats) {
 					console.log('key', key);
-					if(e == null){
+					if (e == null) {
 						stats.height = key;
-						sendMsg({msg: 'chainstats', e: e, chainstats: chain_stats, blockstats: stats});
+						sendMsg({ msg: 'chainstats', e: e, chainstats: chain_stats, blockstats: stats });
 					}
 					cb(null);
 				});
-			}, function() {
+			}, function () {
 			});
 		}
 	}
-	
+
 	//send a message, socket might be closed...
-	function sendMsg(json){
-		if(ws){
-			try{
+	function sendMsg(json) {
+		if (ws) {
+			try {
 				ws.send(JSON.stringify(json));
 			}
-			catch(e){
+			catch (e) {
 				console.log('error ws', e);
 			}
 		}

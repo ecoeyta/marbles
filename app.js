@@ -131,207 +131,22 @@ var wss = {};
 var hlc = require('hlc');
 
 // Create a client chain.
-var chain = hlc.newChain("targetChain");
+var chaincodeName = 'marble_chaincode'
+var chain = hlc.newChain(chaincodeName);
 
 // Configure the KeyValStore which is used to store sensitive keys
 // as so it is important to secure this storage.
 chain.setKeyValStore(hlc.newFileKeyValStore('./tmp/keyValStore'));
 
-// Set the URL for member services
-chain.setMemberServicesUrl("grpc://localhost:50051");
-
-// Add a peer's URL
-chain.addPeer("grpc://localhost:30303");
-
 // ==================================
 // load peers manually or from VCAP, VCAP will overwrite hardcoded list!
 // ==================================
-//this hard coded list is intentionaly left here, feel free to use it when initially starting out
-//please create your own network when you are up and running
-var manual = {
-  "credentials": {
-    "peers": [
-      {
-        "discovery_host": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_vp1-discovery.blockchain.ibm.com",
-        "discovery_port": 30303,
-        "api_host": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_vp1-api.blockchain.ibm.com",
-        "api_port_tls": 443,
-        "api_port": 80,
-        "type": "peer",
-        "network_id": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527",
-        "container_id": "deb95d91457ad44b33c267ccf4513d78da12f62256881d731cb44d585317817c",
-        "id": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_vp1",
-        "api_url": "http://e140a9ba-1456-4a9a-8db2-a61fa3d6b527_vp1-api.blockchain.ibm.com:80"
-      },
-      {
-        "discovery_host": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_vp2-discovery.blockchain.ibm.com",
-        "discovery_port": 30303,
-        "api_host": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_vp2-api.blockchain.ibm.com",
-        "api_port_tls": 443,
-        "api_port": 80,
-        "type": "peer",
-        "network_id": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527",
-        "container_id": "a90203462cdfc702f39eb0e23aab8275ed553a9b2a87cd6275f7da436f0c8616",
-        "id": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_vp2",
-        "api_url": "http://e140a9ba-1456-4a9a-8db2-a61fa3d6b527_vp2-api.blockchain.ibm.com:80"
-      }
-    ],
-    "ca": {
-      "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_ca": {
-        "url": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_ca-api.blockchain.ibm.com:30303",
-        "discovery_host": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_ca-discovery.blockchain.ibm.com",
-        "discovery_port": 30303,
-        "api_host": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527_ca-api.blockchain.ibm.com",
-        "api_port_tls": 30303,
-        "api_port": 80,
-        "type": "ca",
-        "network_id": "e140a9ba-1456-4a9a-8db2-a61fa3d6b527",
-        "container_id": "51459c0ba7f32c0ead25e2b0870e4812fda6ba1df820f1480fe4c956ef39e90e"
-      }
-    },
-    "users": [
-      {
-        "username": "dashboarduser_type0_9efa87fcd4",
-        "secret": "76cc8a27bf",
-        "enrollId": "dashboarduser_type0_9efa87fcd4",
-        "enrollSecret": "76cc8a27bf"
-      },
-      {
-        "username": "dashboarduser_type0_d99cd1c85e",
-        "secret": "e1d238a30f",
-        "enrollId": "dashboarduser_type0_d99cd1c85e",
-        "enrollSecret": "e1d238a30f"
-      },
-      {
-        "username": "user_type1_e408042b7a",
-        "secret": "0b45f81f0e",
-        "enrollId": "user_type1_e408042b7a",
-        "enrollSecret": "0b45f81f0e"
-      },
-      {
-        "username": "user_type1_de474457ef",
-        "secret": "ff6c9f0723",
-        "enrollId": "user_type1_de474457ef",
-        "enrollSecret": "ff6c9f0723"
-      },
-      {
-        "username": "user_type1_d9bc2a4e91",
-        "secret": "7c77ca8089",
-        "enrollId": "user_type1_d9bc2a4e91",
-        "enrollSecret": "7c77ca8089"
-      },
-      {
-        "username": "user_type1_1e8da9ae0a",
-        "secret": "db62ec96fe",
-        "enrollId": "user_type1_1e8da9ae0a",
-        "enrollSecret": "db62ec96fe"
-      },
-      {
-        "username": "user_type1_450eb81d16",
-        "secret": "412532b1ae",
-        "enrollId": "user_type1_450eb81d16",
-        "enrollSecret": "412532b1ae"
-      },
-      {
-        "username": "user_type2_55637d40b0",
-        "secret": "393a377635",
-        "enrollId": "user_type2_55637d40b0",
-        "enrollSecret": "393a377635"
-      },
-      {
-        "username": "user_type2_fc56c098e4",
-        "secret": "d2231fd800",
-        "enrollId": "user_type2_fc56c098e4",
-        "enrollSecret": "d2231fd800"
-      },
-      {
-        "username": "user_type2_0002d9307d",
-        "secret": "b3d54c2292",
-        "enrollId": "user_type2_0002d9307d",
-        "enrollSecret": "b3d54c2292"
-      },
-      {
-        "username": "user_type2_0a1286ae88",
-        "secret": "b7fc82253e",
-        "enrollId": "user_type2_0a1286ae88",
-        "enrollSecret": "b7fc82253e"
-      },
-      {
-        "username": "user_type2_cf9bfb2618",
-        "secret": "5b34f0e7aa",
-        "enrollId": "user_type2_cf9bfb2618",
-        "enrollSecret": "5b34f0e7aa"
-      },
-      {
-        "username": "user_type4_620d8df5c9",
-        "secret": "e6a819023a",
-        "enrollId": "user_type4_620d8df5c9",
-        "enrollSecret": "e6a819023a"
-      },
-      {
-        "username": "user_type4_2f77683e11",
-        "secret": "9b582ee2ac",
-        "enrollId": "user_type4_2f77683e11",
-        "enrollSecret": "9b582ee2ac"
-      },
-      {
-        "username": "user_type4_4e2f00c935",
-        "secret": "894ba6f280",
-        "enrollId": "user_type4_4e2f00c935",
-        "enrollSecret": "894ba6f280"
-      },
-      {
-        "username": "user_type4_c0b65d184e",
-        "secret": "287646c2ed",
-        "enrollId": "user_type4_c0b65d184e",
-        "enrollSecret": "287646c2ed"
-      },
-      {
-        "username": "user_type4_00baebef00",
-        "secret": "6ff7ba676e",
-        "enrollId": "user_type4_00baebef00",
-        "enrollSecret": "6ff7ba676e"
-      },
-      {
-        "username": "user_type8_59f800e7cc",
-        "secret": "a2bd47df6f",
-        "enrollId": "user_type8_59f800e7cc",
-        "enrollSecret": "a2bd47df6f"
-      },
-      {
-        "username": "user_type8_cc0526de27",
-        "secret": "6049475a36",
-        "enrollId": "user_type8_cc0526de27",
-        "enrollSecret": "6049475a36"
-      },
-      {
-        "username": "user_type8_72cee1a420",
-        "secret": "76df56e0b0",
-        "enrollId": "user_type8_72cee1a420",
-        "enrollSecret": "76df56e0b0"
-      },
-      {
-        "username": "user_type8_d8b1c9d471",
-        "secret": "510cd1e885",
-        "enrollId": "user_type8_d8b1c9d471",
-        "enrollSecret": "510cd1e885"
-      },
-      {
-        "username": "user_type8_62e1a915b9",
-        "secret": "fb7e5dc525",
-        "enrollId": "user_type8_62e1a915b9",
-        "enrollSecret": "fb7e5dc525"
-      }
-    ]
-  }
-};
-var peers = manual.credentials.peers;
-console.log('loading hardcoded peers');
-var ca = manual.credentials.ca;
-console.log('loading hardcoded certificate authority');
-var users = null;																		//users are only found if security is on
-if (manual.credentials.users) users = manual.credentials.users;
-console.log('loading hardcoded users');
+
+var peerURLs = [];
+var caURL = null;
+var users = null;
+
+var registrar = null; //user used to register other users and deploy chaincode
 
 if (process.env.VCAP_SERVICES) {															//load from vcap, search for service, 1 of the 3 should be found...
   var servicesObject = JSON.parse(process.env.VCAP_SERVICES);
@@ -346,12 +161,19 @@ if (process.env.VCAP_SERVICES) {															//load from vcap, search for serv
       if (servicesObject[i][0].credentials && servicesObject[i][0].credentials.peers) {
         console.log('overwritting peers, loading from a vcap service: ', i);
         peers = servicesObject[i][0].credentials.peers;
+        for (var i in peers) {
+          peerURLs.push(
+            peers[i].discovery_host + ":" + peers[i].discovery_port
+          );
+        }
         if (servicesObject[i][0].credentials.ca) {
           console.log('overwritting ca, loading from a vcap service: ', i);
           ca = servicesObject[i][0].credentials.ca;
+          caURL = ca.discovery_host + ":" + ca.discovery_port;
           if (servicesObject[i][0].credentials.users) {
             console.log('overwritting users, loading from a vcap service: ', i);
             users = servicesObject[i][0].credentials.users;
+            //TODO extract registrar from users once user list has been updated to new SDK
           }
           else users = null;													//no security	
         }
@@ -360,63 +182,105 @@ if (process.env.VCAP_SERVICES) {															//load from vcap, search for serv
       }
     }
   }
+} else {
+  console.log('loading hardcoding users and certificate authority...')
+  caURL = 'grpc://test-ca.rtp.raleigh.ibm.com:50051';
+  peerURLs.push('grpc://test-peer1.rtp.raleigh.ibm.com:30303');
+  peerURLs.push('grpc://test-peer2.rtp.raleigh.ibm.com:30303');
+  peerURLs.push('grpc://test-peer3.rtp.raleigh.ibm.com:30303');
+
+  registrar = {
+    'username': 'ethanicus',
+    'secret': 'trainisland'
+  }
 }
 
 // ==================================
 // configure hyperledger client sdk
 // ==================================
 // Set the URL for member services
-var caURL = "grpc://ajp-ca.rtp.raleigh.ibm.com:50051";
+console.log('adding ca: \'' + caURL + '\'');
 chain.setMemberServicesUrl(caURL);
-console.log("adding ca: " + caURL);
 
 // Add all peers' URL
-for (var i in peers) {
-  if (i > 3) break;
-  var num = parseInt(i) + 1;
-  var peerURL = "grpc://ajp-p" + num + ".rtp.raleigh.ibm.com:30303";
-  chain.addPeer(peerURL);
-  console.log("adding peer[" + i + "]: " + peerURL);
+for (var i in peerURLs) {
+  console.log('adding peer with URL: \'' + peerURLs[i] + '\'');
+  chain.addPeer(peerURLs[i]);
 }
 
-var webAdmin = {
-  "username": "test_user0",
-  "secret": "MS9qrN8hFjlE"
-}
+var chaincodeID = null;
 
-console.log("enrolling user %s with secret %s as registrar...", webAdmin.username, webAdmin.secret);
-chain.enroll(webAdmin.username, webAdmin.secret, function (err, user) {
-  if (err) return console.log("ERROR: failed to enroll user: %s", err);
-  console.log("successfully enrolled user %s!", webAdmin.username);
+console.log('enrolling user \'%s\' with secret \'%s\' as registrar...', registrar.username, registrar.secret);
+chain.enroll(registrar.username, registrar.secret, function (err, user) {
+  if (err) return console.log('Error: failed to enroll user: %s', err);
+
+  console.log('successfully enrolled user \'%s\'!', registrar.username);
+  chain.setRegistrar(user);
+
+  registrar = user;
+
+  var deployRequest = {
+    args: ['99'],
+    chaincodeID: chaincodeName,
+    fcn: 'init',
+    chaincodePath: 'github.com/marbles-chaincode/part2'
+  }
+  console.log('deploying chaincode from path %s', deployRequest.chaincodePath)
+  var transactionContext = user.deploy(deployRequest);
+
+  transactionContext.on('complete', function (results) {
+    console.log('chaincode deployed successfully!');
+    console.log('chaincodeID: %s', results.chaincodeID);
+
+    chaincodeID = results.chaincodeID;
+
+    var invokeRequest = {
+      chaincodeID: chaincodeID,
+      fnc: "Init"
+    }
+    //user.invoke();
+
+    //pass chain to part1 and part2 for use
+    part1.setup(user, chaincodeID);
+    part2.setup(user, chaincodeID);
+
+    cb_deployed();
+    //registrar_cb(err);
+  });
+
+  transactionContext.on('error', function (err) {
+    console.log('Error deploying chaincode: %s', err.msg);
+    console.log('App will fail without chaincode, sorry!');
+  });
 });
 
-var registrationRequest = {
-  account: "something",
-  affiliation: "bank_a",
-  enrollmentID: "test_user0"
+function registrar_cb(err) {
+  if (err) return console.log('%s', err);
+
+  var registrationRequest = {
+    account: "bank_a",
+    affiliation: "00027",
+    enrollmentID: "ethanco",
+    registrar: {
+      roles: ["client"],
+      delegateRoles: ["client"]
+    }
+  }
+
+  chain.register(registrationRequest, function (err, pass) {
+    if (err) return console.log('ERROR: failed to register user [%s]', err);
+    console.log('successfully registered user \'%s\' with password \'%s\'', registrationRequest.enrollmentID, pass);
+  });
 }
 
-chain.register(registrationRequest, function(err, pass) {
-  if (err) return console.log("ERROR: failed to register user: %s", err);
-  console.log("successfully register user %s!");
-});
+function cb_ready() {
 
-function cb_ready() {																	//response has chaincode functions
-  if (err != null) {
-    console.log('! looks like an error loading the chaincode or network, app will fail\n', err);
-    if (!process.error) process.error = { type: 'load', msg: err.details };				//if it already exist, keep the last error
+  if (!cc.details.deployed_name || cc.details.deployed_name === '') {					//decide if i need to deploy
+    cc.deploy('init', ['99'], { save_path: './cc_summaries', delay_ms: 50000 }, cb_deployed);
   }
   else {
-    chaincode = cc;
-    part1.setup(ibc, cc);
-    part2.setup(ibc, cc);
-    if (!cc.details.deployed_name || cc.details.deployed_name === '') {					//decide if i need to deploy
-      cc.deploy('init', ['99'], { save_path: './cc_summaries', delay_ms: 50000 }, cb_deployed);
-    }
-    else {
-      console.log('chaincode summary file indicates chaincode has been previously deployed');
-      cb_deployed();
-    }
+    console.log('chaincode summary file indicates chaincode has been previously deployed');
+    cb_deployed();
   }
 }
 
@@ -438,7 +302,7 @@ function cb_deployed(e, d) {
         console.log('received ws msg:', message);
         try {
           var data = JSON.parse(message);
-          part1.process_msg(ws, data);
+          //part1.process_msg(ws, data);
           part2.process_msg(ws, data);
         }
         catch (e) {
@@ -462,36 +326,70 @@ function cb_deployed(e, d) {
       });
     };
 
-    // ========================================================
-    // Monitor the height of the blockchain
-    // ========================================================
-    ibc.monitor_blockheight(function (chain_stats) {										//there is a new block, lets refresh everything that has a state
-      if (chain_stats && chain_stats.height) {
-        console.log('hey new block, lets refresh and broadcast to all');
-        ibc.block_stats(chain_stats.height - 1, cb_blockstats);
-        wss.broadcast({ msg: 'reset' });
-        chaincode.query.read(['_marbleindex'], cb_got_index);
-        chaincode.query.read(['_opentrades'], cb_got_trades);
+    heart_beat();
+
+    //setInterval(function () { heart_beat() }, 1000);
+
+    function heart_beat(cb) {
+      console.log("heartbeat");
+      var queryRequestReadMarbleIndex = {
+        args: ['_marbleindex'],
+        fcn: 'read',
+        chaincodeID: chaincodeID
       }
 
-      //got the block's stats, lets send the statistics
-      function cb_blockstats(e, stats) {
-        if (e != null) console.log('error:', e);
-        else {
-          if (chain_stats.height) stats.height = chain_stats.height - 1;
-          wss.broadcast({ msg: 'chainstats', e: e, chainstats: chain_stats, blockstats: stats });
+      var transactionContextMarbleIndex = registrar.query(queryRequestReadMarbleIndex);
+      transactionContextMarbleIndex.on('complete', function (data) {
+        console.log('query complete');
+        console.log(data);
+        if (data.error) {
+          cb_got_index(helper.eFmt('query() resp error', 400, data.error), null);
+        } else if (data.result) {
+          cb_got_index(null, data.result);
+        } else {
+          console.log('Error: result did not contain data')
         }
-      }
+      });
+
+      transactionContextMarbleIndex.on('error', function (err) {
+        console.log(err);
+      });
+
+      //registrar.query.read(['_marbleindex'], cb_got_index);
+      //registrar.query.read(['_opentrades'], cb_got_trades);
 
       //got the marble index, lets get each marble
       function cb_got_index(e, index) {
         if (e != null) console.log('error:', e);
         else {
           try {
+            console.log('parsing json...');
             var json = JSON.parse(index);
+            console.log('json: ' + json);
             for (var i in json) {
               console.log('!', i, json[i]);
-              chaincode.query.read([json[i]], cb_got_marble);							//iter over each, read their values
+
+              var queryRequest = {
+                args: [json[i]],
+                fcn: 'read',
+                chaincodeID: chaincodeID
+              }
+
+              var transactionContext = registrar.query(queryRequest);
+              transactionContext.on('complete', function (data) {
+                console.log(data);
+                var e;
+                try {
+                  wss.broadcast({ msg: 'marbles', marble: JSON.parse(data.result) });
+                }
+                catch (e) {
+                  console.log('marble msg error', e);
+                }
+              });
+
+              transactionContext.on('error', function (err) {
+                console.log(err);
+              });
             }
           }
           catch (e) {
@@ -528,6 +426,74 @@ function cb_deployed(e, d) {
           }
         }
       }
-    });
+    };
+
+    // ========================================================
+    // Monitor the height of the blockchain
+    // ========================================================
+    // ibc.monitor_blockheight(function (chain_stats) {										//there is a new block, lets refresh everything that has a state
+    //   if (chain_stats && chain_stats.height) {
+    //     console.log('hey new block, lets refresh and broadcast to all');
+    //     ibc.block_stats(chain_stats.height - 1, cb_blockstats);
+    //     wss.broadcast({ msg: 'reset' });
+    //     chaincode.query.read(['_marbleindex'], cb_got_index);
+    //     chaincode.query.read(['_opentrades'], cb_got_trades);
+    //   }
+
+    //   //got the block's stats, lets send the statistics
+    //   function cb_blockstats(e, stats) {
+    //     if (e != null) console.log('error:', e);
+    //     else {
+    //       if (chain_stats.height) stats.height = chain_stats.height - 1;
+    //       wss.broadcast({ msg: 'chainstats', e: e, chainstats: chain_stats, blockstats: stats });
+    //     }
+    //   }
+
+    //   //got the marble index, lets get each marble
+    //   function cb_got_index(e, index) {
+    //     if (e != null) console.log('error:', e);
+    //     else {
+    //       try {
+    //         var json = JSON.parse(index);
+    //         for (var i in json) {
+    //           console.log('!', i, json[i]);
+    //           chaincode.query.read([json[i]], cb_got_marble);							//iter over each, read their values
+    //         }
+    //       }
+    //       catch (e) {
+    //         console.log('marbles index msg error:', e);
+    //       }
+    //     }
+    //   }
+
+    //   //call back for getting a marble, lets send a message
+    //   function cb_got_marble(e, marble) {
+    //     if (e != null) console.log('error:', e);
+    //     else {
+    //       try {
+    //         wss.broadcast({ msg: 'marbles', marble: JSON.parse(marble) });
+    //       }
+    //       catch (e) {
+    //         console.log('marble msg error', e);
+    //       }
+    //     }
+    //   }
+
+    //   //call back for getting open trades, lets send the trades
+    //   function cb_got_trades(e, trades) {
+    //     if (e != null) console.log('error:', e);
+    //     else {
+    //       try {
+    //         trades = JSON.parse(trades);
+    //         if (trades && trades.open_trades) {
+    //           wss.broadcast({ msg: 'open_trades', open_trades: trades.open_trades });
+    //         }
+    //       }
+    //       catch (e) {
+    //         console.log('trade msg error', e);
+    //       }
+    //     }
+    //   }
+    // });
   }
 }
