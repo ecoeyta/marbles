@@ -184,10 +184,10 @@ if (process.env.VCAP_SERVICES) {															//load from vcap, search for serv
   }
 } else {
   console.log('loading hardcoding users and certificate authority...')
-  caURL = 'grpc://test-ca.rtp.raleigh.ibm.com:50051';
-  peerURLs.push('grpc://test-peer1.rtp.raleigh.ibm.com:30303');
-  peerURLs.push('grpc://test-peer2.rtp.raleigh.ibm.com:30303');
-  peerURLs.push('grpc://test-peer3.rtp.raleigh.ibm.com:30303');
+  caURL = 'grpc://ethan-ca.rtp.raleigh.ibm.com:50051';
+  peerURLs.push('grpc://ethan-p1.rtp.raleigh.ibm.com:30303');
+  peerURLs.push('grpc://ethan-p2.rtp.raleigh.ibm.com:30303');
+  peerURLs.push('grpc://ethan-p3.rtp.raleigh.ibm.com:30303');
 
   registrar = {
     'username': 'ethanicus',
@@ -221,9 +221,9 @@ chain.enroll(registrar.username, registrar.secret, function (err, user) {
 
   var deployRequest = {
     args: ['99'],
-    chaincodeID: chaincodeName,
+    //chaincodeID: chaincodeName,
     fcn: 'init',
-    chaincodePath: 'github.com/marbles-chaincode/part2'
+    chaincodePath: 'github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02'
   }
   console.log('deploying chaincode from path %s', deployRequest.chaincodePath)
   var transactionContext = user.deploy(deployRequest);
@@ -234,16 +234,10 @@ chain.enroll(registrar.username, registrar.secret, function (err, user) {
 
     chaincodeID = results.chaincodeID;
 
-    var invokeRequest = {
-      chaincodeID: chaincodeID,
-      fnc: "Init"
-    }
-    //user.invoke();
-
     //pass chain to part1 and part2 for use
     part1.setup(user, chaincodeID);
     part2.setup(user, chaincodeID);
-
+    //require('sleep').sleep(60);
     cb_deployed();
     //registrar_cb(err);
   });
@@ -253,36 +247,6 @@ chain.enroll(registrar.username, registrar.secret, function (err, user) {
     console.log('App will fail without chaincode, sorry!');
   });
 });
-
-function registrar_cb(err) {
-  if (err) return console.log('%s', err);
-
-  var registrationRequest = {
-    account: "bank_a",
-    affiliation: "00027",
-    enrollmentID: "ethanco",
-    registrar: {
-      roles: ["client"],
-      delegateRoles: ["client"]
-    }
-  }
-
-  chain.register(registrationRequest, function (err, pass) {
-    if (err) return console.log('ERROR: failed to register user [%s]', err);
-    console.log('successfully registered user \'%s\' with password \'%s\'', registrationRequest.enrollmentID, pass);
-  });
-}
-
-function cb_ready() {
-
-  if (!cc.details.deployed_name || cc.details.deployed_name === '') {					//decide if i need to deploy
-    cc.deploy('init', ['99'], { save_path: './cc_summaries', delay_ms: 50000 }, cb_deployed);
-  }
-  else {
-    console.log('chaincode summary file indicates chaincode has been previously deployed');
-    cb_deployed();
-  }
-}
 
 // ============================================================================================================================
 // 												WebSocket Communication Madness
@@ -302,8 +266,8 @@ function cb_deployed(e, d) {
         console.log('received ws msg:', message);
         try {
           var data = JSON.parse(message);
-          //part1.process_msg(ws, data);
-          part2.process_msg(ws, data);
+          part1.process_msg(ws, data);
+          //part2.process_msg(ws, data);
         }
         catch (e) {
           console.log('ws message error', e);
@@ -338,10 +302,11 @@ function cb_deployed(e, d) {
         chaincodeID: chaincodeID
       }
 
+      console.log('first query');
       var transactionContextMarbleIndex = registrar.query(queryRequestReadMarbleIndex);
       transactionContextMarbleIndex.on('complete', function (data) {
         console.log('query complete');
-        console.log(data);
+        console.log(data.toString());
         if (data.error) {
           cb_got_index(helper.eFmt('query() resp error', 400, data.error), null);
         } else if (data.result) {
@@ -352,6 +317,7 @@ function cb_deployed(e, d) {
       });
 
       transactionContextMarbleIndex.on('error', function (err) {
+        console.log('error in query');
         console.log(err);
       });
 
