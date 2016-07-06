@@ -175,7 +175,11 @@ function connect_to_server(){
 			var data = JSON.parse(msg.data);
 			if(data.v != '2'){
 				console.log('rec', data.msg, data);
-				if(data.marble){
+				if (data.msg === 'refresh') {
+					console.log('refreshing page...');
+					location.reload();
+				}
+				else if(data.marble){
 					build_ball(data.marble);
 				}
 				else if(data.msg === 'chainstats'){

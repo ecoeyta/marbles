@@ -376,6 +376,9 @@ function connect_to_server(){
 								id: data.blockstats.height, 
 								blockstats: data.blockstats
 							};
+							console.log('temp: ');
+							console.log(temp.id);
+							console.log(temp.blockstats);
 				new_block(temp);									//send to blockchain.js
 			}
 			else if(data.msg === 'reset'){							//clear marble knowledge, prepare of incoming marble states

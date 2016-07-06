@@ -23,6 +23,7 @@ module.exports.process_msg = function (ws, data) {
 				var transactionContext = registrar.invoke(invokeRequest)	//create a new marble
 
 				transactionContext.on('complete', function (results) {
+					console.log('create complete!');
 					console.log(results);
 				});
 
@@ -41,7 +42,7 @@ module.exports.process_msg = function (ws, data) {
 			var transactionContext = registrar.query(queryRequest)	//create a new marble
 
 			transactionContext.on('complete', function (results) {
-				console.log(results);
+				console.log('get complete!');
 				cb_got_index(null, results.result);
 			});
 
@@ -81,8 +82,56 @@ module.exports.process_msg = function (ws, data) {
 		}
 		else if (data.type == 'chainstats') {
 			console.log('chainstats msg');
-			//TODO how to get this with new SDK?
-			//ibc.chain_stats(cb_chainstats);
+
+			//get chainstats through REST API
+			var options = {
+				host: 'ethan-p1.rtp.raleigh.ibm.com',
+				port: '5000',
+				path: '/chain',
+				method: 'GET'
+			};
+
+			function success(statusCode, headers, resp) {
+				console.log('chainstats success!');
+				console.log(resp);
+				cb_chainstats(null, JSON.parse(resp));
+			};
+			function failure(statusCode, headers, msg) {
+				console.log('chainstats failure :(');
+				console.log('status code: ' + statusCode);
+				console.log('headers: ' + headers);
+				console.log('message: ' + msg);
+			};
+
+			var goodJSON = false;
+			request = http.request(options, function (resp) {
+				var str = '', temp, chunks = 0;
+
+				resp.setEncoding('utf8');
+				resp.on('data', function (chunk) {															//merge chunks of request
+					str += chunk;
+					chunks++;
+				});
+				resp.on('end', function () {																	//wait for end before decision
+					if (resp.statusCode == 204 || resp.statusCode >= 200 && resp.statusCode <= 399) {
+						success(resp.statusCode, resp.headers, str);
+					}
+					else {
+						failure(resp.statusCode, resp.headers, str);
+					}
+				});
+			});
+
+			request.on('error', function (e) {																//handle error event
+				failure(500, null, e);
+			});
+
+			request.setTimeout(20000);
+			request.on('timeout', function () {																//handle time out event
+				failure(408, null, 'Request timed out');
+			});
+
+			request.end();
 		}
 	}
 
@@ -90,6 +139,8 @@ module.exports.process_msg = function (ws, data) {
 	function cb_got_index(e, index) {
 		if (e != null) console.log('error:', e);
 		else {
+			if (index == "null") return;
+
 			try {
 				var json = JSON.parse(index);
 				var keys = Object.keys(json);
@@ -97,7 +148,7 @@ module.exports.process_msg = function (ws, data) {
 
 				//serialized version
 				async.eachLimit(keys, concurrency, function (key, cb) {
-					console.log('!', json[key]);
+					//console.log('!', json[key]);
 
 					var queryRequest = {
 						args: [json[key]],
@@ -134,21 +185,67 @@ module.exports.process_msg = function (ws, data) {
 		chain_stats = stats;
 		if (stats && stats.height) {
 			var list = [];
-			for (var i = stats.height - 1; i >= 1; i--) {									//create a list of heights we need
+			for (var i = stats.height - 1; i >= 1; i--) {								//create a list of heights we need
 				list.push(i);
 				if (list.length >= 8) break;
 			}
-			list.reverse();																//flip it so order is correct in UI
+
+			list.reverse();															//flip it so order is correct in UI
 			console.log(list);
-			async.eachLimit(list, 1, function (key, cb) {								//iter through each one, and send it
-				ibc.block_stats(key, function (e, stats) {
-					console.log('key', key);
-					if (e == null) {
-						stats.height = key;
-						sendMsg({ msg: 'chainstats', e: e, chainstats: chain_stats, blockstats: stats });
-					}
+			async.eachLimit(list, 1, function (key, cb) {							//iter through each one, and send it
+				//get chainstats through REST API
+				var options = {
+					host: 'ethan-p1.rtp.raleigh.ibm.com',
+					port: '5000',
+					path: '/chain/blocks/' + key,
+					method: 'GET'
+				};
+
+				function success(statusCode, headers, stats) {
+					stats = JSON.parse(stats);
+					stats.height = key;
+					console.log('stats:');
+					console.log(stats);
+					sendMsg({ msg: 'chainstats', e: e, chainstats: chain_stats, blockstats: stats});
 					cb(null);
+				};
+
+				function failure(statusCode, headers, msg) {
+					console.log('chainstats block ' + key + ' failure :(');
+					console.log('status code: ' + statusCode);
+					console.log('headers: ' + headers);
+					console.log('message: ' + msg);
+				};
+
+				var goodJSON = false;
+				request = http.request(options, function (resp) {
+					var str = '', temp, chunks = 0;
+
+					resp.setEncoding('utf8');
+					resp.on('data', function (chunk) {															//merge chunks of request
+						str += chunk;
+						chunks++;
+					});
+					resp.on('end', function () {																	//wait for end before decision
+						if (resp.statusCode == 204 || resp.statusCode >= 200 && resp.statusCode <= 399) {
+							success(resp.statusCode, resp.headers, str);
+						}
+						else {
+							failure(resp.statusCode, resp.headers, str);
+						}
+					});
 				});
+
+				request.on('error', function (e) {																//handle error event
+					failure(500, null, e);
+				});
+
+				request.setTimeout(20000);
+				request.on('timeout', function () {																//handle time out event
+					failure(408, null, 'Request timed out');
+				});
+
+				request.end();
 			}, function () {
 			});
 		}

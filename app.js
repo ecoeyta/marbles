@@ -221,9 +221,8 @@ chain.enroll(registrar.username, registrar.secret, function (err, user) {
 
   var deployRequest = {
     args: ['99'],
-    //chaincodeID: chaincodeName,
     fcn: 'init',
-    chaincodePath: 'github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02'
+    chaincodePath: 'github.com/marbles-chaincode/hyperledger/part2'
   }
   console.log('deploying chaincode from path %s', deployRequest.chaincodePath)
   var transactionContext = user.deploy(deployRequest);
@@ -237,9 +236,7 @@ chain.enroll(registrar.username, registrar.secret, function (err, user) {
     //pass chain to part1 and part2 for use
     part1.setup(user, chaincodeID);
     part2.setup(user, chaincodeID);
-    //require('sleep').sleep(60);
     cb_deployed();
-    //registrar_cb(err);
   });
 
   transactionContext.on('error', function (err) {
@@ -259,15 +256,16 @@ function cb_deployed(e, d) {
   }
   else {
     console.log('------------------------------------------ Websocket Up ------------------------------------------');
-
+    var currWS;
     wss = new ws.Server({ server: server });												//start the websocket now
     wss.on('connection', function connection(ws) {
+      currWS = ws;
       ws.on('message', function incoming(message) {
         console.log('received ws msg:', message);
         try {
           var data = JSON.parse(message);
-          part1.process_msg(ws, data);
-          //part2.process_msg(ws, data);
+          //part1.process_msg(ws, data);
+          part2.process_msg(ws, data);
         }
         catch (e) {
           console.log('ws message error', e);
@@ -290,23 +288,19 @@ function cb_deployed(e, d) {
       });
     };
 
-    heart_beat();
 
-    //setInterval(function () { heart_beat() }, 1000);
+    var marbleCount = 0;
+    setInterval(function () { heart_beat() }, 2000);
 
     function heart_beat(cb) {
-      console.log("heartbeat");
       var queryRequestReadMarbleIndex = {
         args: ['_marbleindex'],
         fcn: 'read',
         chaincodeID: chaincodeID
       }
 
-      console.log('first query');
       var transactionContextMarbleIndex = registrar.query(queryRequestReadMarbleIndex);
       transactionContextMarbleIndex.on('complete', function (data) {
-        console.log('query complete');
-        console.log(data.toString());
         if (data.error) {
           cb_got_index(helper.eFmt('query() resp error', 400, data.error), null);
         } else if (data.result) {
@@ -321,19 +315,13 @@ function cb_deployed(e, d) {
         console.log(err);
       });
 
-      //registrar.query.read(['_marbleindex'], cb_got_index);
-      //registrar.query.read(['_opentrades'], cb_got_trades);
-
       //got the marble index, lets get each marble
       function cb_got_index(e, index) {
         if (e != null) console.log('error:', e);
         else {
           try {
-            console.log('parsing json...');
             var json = JSON.parse(index);
-            console.log('json: ' + json);
             for (var i in json) {
-              console.log('!', i, json[i]);
 
               var queryRequest = {
                 args: [json[i]],
@@ -343,10 +331,18 @@ function cb_deployed(e, d) {
 
               var transactionContext = registrar.query(queryRequest);
               transactionContext.on('complete', function (data) {
-                console.log(data);
                 var e;
                 try {
                   wss.broadcast({ msg: 'marbles', marble: JSON.parse(data.result) });
+                  if (json.length != marbleCount) {
+                    //console.log('marble count has changed!');
+                    //console.log('old marble count: ' + marbleCount);
+                    //console.log('new marble count: ' + json.length);
+                    marbleCount = json.length;
+                    if (currWS) {
+                      currWS.send(JSON.stringify({ msg: 'refresh' }));
+                    }
+                  }
                 }
                 catch (e) {
                   console.log('marble msg error', e);
